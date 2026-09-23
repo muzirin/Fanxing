@@ -5,6 +5,14 @@
   "version": "1.0.0-b1",
   "publisher": "fanxing-dev",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/muzirin/Fanxing.git"
+  },
+  "homepage": "https://github.com/muzirin/Fanxing#readme",
+  "bugs": {
+    "url": "https://github.com/muzirin/Fanxing/issues"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },

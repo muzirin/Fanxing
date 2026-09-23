@@ -53,7 +53,7 @@
 ### 从源码构建
 
 ```bash
-git clone <repo> fanxing
+git clone https://github.com/muzirin/Fanxing.git fanxing
 cd fanxing
 npm install
 npm run build        # esbuild 打包 -> dist/extension.js

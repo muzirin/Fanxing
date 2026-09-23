@@ -31,4 +31,4 @@
 - 本地测试进程提前退出时的 stdin EPIPE 流错误导致扩展宿主崩溃（闪退）；全面加固未处理 Promise 拒绝路径
 - 切换作业自动保存并关闭当前作业；同一作业各题文件复用同一编辑器组
 
-[1.0.0-b1]: https://github.com/fanxing-dev/fanxing/releases/tag/v1.0.0-b1
+[1.0.0-b1]: https://github.com/muzirin/Fanxing/releases/tag/1.0.0-b1
