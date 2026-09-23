@@ -123,14 +123,21 @@ npx vsce package      # 生成 fanxing-1.0.0-b1.vsix
 
 ## 截图
 
-- 侧边栏（课程/作业/通知/签到/成绩/日程/概览）
-  > 截图待补充：`docs/images/sidebar.png`
-- 题目面板 + 分屏编辑器
-  > 截图待补充：`docs/images/problem-panel.png`
-- 本地测试结果（diff 对比）
-  > 截图待补充：`docs/images/local-test.png`
-- 环境检测报告
-  > 截图待补充：`docs/images/env-check.png`
+**侧边栏**（课程 / 作业 / 通知 / 签到 / 成绩 / 日程 / 概览）
+
+![侧边栏](https://raw.githubusercontent.com/muzirin/Fanxing/main/docs/images/sidebar.png)
+
+**题目面板 + 分屏编辑器**
+
+![题目面板](https://raw.githubusercontent.com/muzirin/Fanxing/main/docs/images/problem-panel.png)
+
+**本地测试结果**（逐用例控制台输出与差异对比）
+
+![本地测试](https://raw.githubusercontent.com/muzirin/Fanxing/main/docs/images/local-test.png)
+
+**环境检测报告**
+
+![环境检测](https://raw.githubusercontent.com/muzirin/Fanxing/main/docs/images/env-check.png)
 
 ## 项目结构
 
