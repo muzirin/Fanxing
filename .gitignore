@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.vsix
+fanxing-debug/
+.openclaw/
+.kilo/
+.DS_Store

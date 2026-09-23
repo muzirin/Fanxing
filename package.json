@@ -1,0 +1,466 @@
+{
+  "name": "fanxing",
+  "displayName": "Fanxing 泛星（繁星）",
+  "description": "超星学习通 VS Code 集成开发环境：课程 / 通知 / 作业 / 编程题本地开发与提交 / 环境检测 / AI 引导式辅导",
+  "version": "1.0.0-b1",
+  "publisher": "fanxing-dev",
+  "license": "GPL-3.0-only",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "keywords": [
+    "chaoxing",
+    "xuexitong",
+    "superstar",
+    "homework",
+    "oj"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fanxing",
+          "title": "Fanxing 泛星",
+          "icon": "media/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "fanxing": [
+        {
+          "id": "fanxing.dashboard",
+          "name": "概览",
+          "type": "webview",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.courses",
+          "name": "课程",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.homework",
+          "name": "作业",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.notifications",
+          "name": "通知",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.signin",
+          "name": "签到",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.grades",
+          "name": "成绩",
+          "icon": "media/logo.svg"
+        },
+        {
+          "id": "fanxing.ddl",
+          "name": "日程",
+          "icon": "media/logo.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "fanxing.courses",
+        "contents": "尚未登录学习通。\n[登录](command:fanxing.login)\n[使用 Cookie 登录](command:fanxing.loginByCookie)"
+      },
+      {
+        "view": "fanxing.homework",
+        "contents": "登录后可查看课程作业。\n[登录](command:fanxing.login)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "fanxing.login",
+        "title": "Fanxing: 登录 (Login)",
+        "icon": "$(sign-in)"
+      },
+      {
+        "command": "fanxing.loginByCookie",
+        "title": "Fanxing: 使用 Cookie 登录 (Login with Cookie)",
+        "icon": "$(key)"
+      },
+      {
+        "command": "fanxing.logout",
+        "title": "Fanxing: 退出登录 (Logout)",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "fanxing.switchAccount",
+        "title": "Fanxing: 切换账号 (Switch Account)",
+        "icon": "$(person)"
+      },
+      {
+        "command": "fanxing.refreshCourses",
+        "title": "Fanxing: 刷新课程 (Refresh Courses)",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "fanxing.checkNotifications",
+        "title": "Fanxing: 检查通知 (Check Notifications)",
+        "icon": "$(bell)"
+      },
+      {
+        "command": "fanxing.submitAssignment",
+        "title": "Fanxing: 提交当前作业 (Submit Current Assignment)",
+        "icon": "$(upload)"
+      },
+      {
+        "command": "fanxing.runLocalTest",
+        "title": "Fanxing: 本地测试 (Run Local Test)",
+        "icon": "$(play)"
+      },
+      {
+        "command": "fanxing.addTestCase",
+        "title": "Fanxing: 添加自定义测试用例 (Add Test Case)",
+        "icon": "$(add)"
+      },
+      {
+        "command": "fanxing.aiReview",
+        "title": "Fanxing: AI 代码审查 (AI Review)",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "fanxing.aiHint",
+        "title": "Fanxing: AI 思路引导 (AI Hint)",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "fanxing.aiExplainError",
+        "title": "Fanxing: AI 错误分析 (AI Explain Error)",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "fanxing.aiComplexity",
+        "title": "Fanxing: AI 复杂度分析 (AI Complexity)",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "fanxing.configureAi",
+        "title": "Fanxing: 配置 AI 提供商 (Configure AI Provider)",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "fanxing.checkEnvironment",
+        "title": "Fanxing: 检查运行环境 (Check Environment)",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "fanxing.openDashboard",
+        "title": "Fanxing: 打开仪表盘 (Open Dashboard)",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "fanxing.viewGrades",
+        "title": "Fanxing: 查看成绩 (View Grades)",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "fanxing.exportDeadlines",
+        "title": "Fanxing: 导出日程到日历文件 (Export Deadlines as .ics)",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "fanxing.showOutput",
+        "title": "Fanxing: 显示日志输出 (Show Output)",
+        "icon": "$(output)"
+      },
+      {
+        "command": "fanxing.refreshGrades",
+        "title": "Fanxing: 刷新成绩 (Refresh Grades)",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "fanxing.viewSubmissions",
+        "title": "Fanxing: 提交记录 (Submission History)",
+        "icon": "$(history)"
+      },
+      {
+        "command": "fanxing.openHomework",
+        "title": "Fanxing: 打开作业 (Open Homework)"
+      },
+      {
+        "command": "fanxing.openNotice",
+        "title": "Fanxing: 打开通知 (Open Notice)"
+      },
+      {
+        "command": "fanxing.signActivity",
+        "title": "Fanxing: 立即签到 (Sign In Now)"
+      },
+      {
+        "command": "fanxing.openSourceFile",
+        "title": "Fanxing: 打开答题文件 (Open Source File)"
+      },
+      {
+        "command": "fanxing.dumpWorkList",
+        "title": "Fanxing: 抓取作业原始响应 (Dump Homework Raw Response)",
+        "icon": "$(debug-console)"
+      },
+      {
+        "command": "fanxing.openSettings",
+        "title": "Fanxing: 设置 (Settings)",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "fanxing.toggleHomeworkFilter",
+        "title": "Fanxing: 作业显示筛选 (Toggle Homework Filter)",
+        "icon": "$(filter)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "fanxing.refreshCourses",
+          "when": "view == fanxing.courses",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.checkNotifications",
+          "when": "view == fanxing.notifications",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.checkEnvironment",
+          "when": "view == fanxing.homework",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.toggleHomeworkFilter",
+          "when": "view == fanxing.homework",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.openDashboard",
+          "when": "view == fanxing.dashboard",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.openSettings",
+          "when": "view == fanxing.dashboard || view == fanxing.courses || view == fanxing.homework || view == fanxing.notifications || view == fanxing.signin || view == fanxing.grades || view == fanxing.ddl",
+          "group": "navigation@100"
+        },
+        {
+          "command": "fanxing.refreshGrades",
+          "when": "view == fanxing.grades",
+          "group": "navigation"
+        },
+        {
+          "command": "fanxing.exportDeadlines",
+          "when": "view == fanxing.ddl",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fanxing.submitAssignment",
+          "when": "view == fanxing.homework && viewItem == homework-code",
+          "group": "inline"
+        },
+        {
+          "command": "fanxing.runLocalTest",
+          "when": "view == fanxing.homework && viewItem == homework-code",
+          "group": "inline"
+        },
+        {
+          "command": "fanxing.dumpWorkList",
+          "when": "view == fanxing.homework && viewItem == homework-course",
+          "group": "1_debug"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "fanxing.runLocalTest",
+          "when": "resourceLangId =~ /^(c|cpp|java|python)$/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fanxing.submitAssignment",
+          "when": "resourceLangId =~ /^(c|cpp|java|python)$/",
+          "group": "navigation@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "fanxing.openDashboard",
+          "when": "false"
+        },
+        {
+          "command": "fanxing.openHomework",
+          "when": "false"
+        },
+        {
+          "command": "fanxing.openNotice",
+          "when": "false"
+        },
+        {
+          "command": "fanxing.signActivity",
+          "when": "false"
+        },
+        {
+          "command": "fanxing.openSourceFile",
+          "when": "false"
+        },
+        {
+          "command": "fanxing.dumpWorkList",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Fanxing 泛星",
+      "properties": {
+        "fanxing.locale": {
+          "type": "string",
+          "enum": ["auto", "zh", "en"],
+          "default": "auto",
+          "description": "界面语言：auto 跟随 VS Code，zh 中文，en 英文"
+        },
+        "fanxing.notification.pollIntervalMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "description": "通知轮询间隔（分钟）"
+        },
+        "fanxing.signin.pollIntervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 15,
+          "description": "签到活动检测间隔（秒），检测到教师发起签到时弹出提醒"
+        },
+        "fanxing.signin.notifyOnNew": {
+          "type": "boolean",
+          "default": true,
+          "description": "教师发起签到时弹出桌面提醒（签到需本人在插件内手动确认）"
+        },
+        "fanxing.homework.defaultLanguage": {
+          "type": "string",
+          "enum": ["c", "cpp", "java", "python"],
+          "default": "cpp",
+          "description": "编程作业默认语言"
+        },
+        "fanxing.homework.forceLocalTestBeforeSubmit": {
+          "type": "boolean",
+          "default": true,
+          "description": "提交学习通前强制本地样例测试全部通过（关闭后仍会提示确认）"
+        },
+        "fanxing.homework.deadlineWarnHours": {
+          "type": "number",
+          "default": 24,
+          "minimum": 1,
+          "description": "作业截止前多少小时开始高亮预警"
+        },
+        "fanxing.judge.timeoutMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 200,
+          "description": "单个测试用例运行超时（毫秒），尽量对齐学习通 OJ 限制"
+        },
+        "fanxing.judge.compileArgs": {
+          "type": "object",
+          "default": {
+            "c": ["-O2", "-std=c11", "-lm"],
+            "cpp": ["-O2", "-std=c++17", "-lm"],
+            "java": ["-encoding", "UTF-8"],
+            "python": []
+          },
+          "description": "各语言编译/运行参数，尽量复刻学习通 OJ 环境"
+        },
+        "fanxing.judge.normalizeTrailingWhitespace": {
+          "type": "boolean",
+          "default": true,
+          "description": "评测时忽略行尾空白与末尾空行差异"
+        },
+        "fanxing.ai.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用 AI 辅助（仅引导式提示，禁止代写完整答案）"
+        },
+        "fanxing.ai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI 兼容接口地址（支持 OpenAI / DeepSeek / 通义千问 / 本地 Ollama 等）"
+        },
+        "fanxing.ai.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "模型名称"
+        },
+        "fanxing.ai.proxy": {
+          "type": "string",
+          "default": "",
+          "description": "HTTP(S) 代理地址，留空不使用代理"
+        },
+        "fanxing.ai.requestTimeoutMs": {
+          "type": "number",
+          "default": 60000,
+          "description": "AI 请求超时（毫秒）"
+        },
+        "fanxing.formula.preferLatexFromAlt": {
+          "type": "boolean",
+          "default": true,
+          "description": "优先使用题目图片的 alt/标题文本还原 LaTeX 公式"
+        },
+        "fanxing.formula.ocrEndpoint": {
+          "type": "string",
+          "default": "",
+          "description": "可选：公式图片 OCR 还原服务地址（POST image -> {latex}），留空则仅本地缓存展示图片"
+        },
+        "fanxing.cache.ttlMinutes": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "description": "课程/作业/通知数据本地缓存有效期（分钟）"
+        },
+        "fanxing.download.targetDir": {
+          "type": "string",
+          "default": "fanxing-resources",
+          "description": "课程附件批量下载的相对目录（相对工作区根目录）"
+        },
+        "fanxing.log.level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "日志级别（输出面板 Fanxing）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "build:tsc": "tsc",
+    "watch": "node esbuild.js --watch --dev",
+    "typecheck": "tsc --noEmit",
+    "test": "mocha --require tsx/cjs \"test/**/*.test.ts\"",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.23.0",
+    "mocha": "^10.7.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "axios": "^1.7.0"
+  }
+}

@@ -1,0 +1,10 @@
+.vscode/**
+node_modules/**
+src/**
+test/**
+docs/**
+esbuild.js
+tsconfig.json
+**/*.map
+.gitignore
+openclaw*
