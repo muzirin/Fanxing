@@ -461,4 +461,101 @@ int main(){}</code></pre></dd></dl>
     assert.strictEqual(normalized[0].read, false);
     assert.strictEqual(normalized[1].read, true);
   });
+
+  it('parseWorkHtml 提取条目内嵌详情直链（&amp; 解码 + 相对路径补全）', () => {
+    const html = `
+      <ul>
+        <li onclick="goTask(this)">
+          <p class="overHidden2 fl">矩阵的运算与初等变换(副本)</p>
+          <a href="/mooc-ans/mooc2/work/task?courseId=1&amp;classId=2&amp;cpi=3&amp;workId=56167323&amp;enc=abc">查看</a>
+          <span class="status">未交</span>
+        </li>
+      </ul>`;
+    const works = parseWorkHtml(html);
+    assert.strictEqual(works.length, 1);
+    assert.strictEqual(works[0].workId, '56167323');
+    assert.strictEqual(
+      works[0].url,
+      'https://mooc1.chaoxing.com/mooc-ans/mooc2/work/task?courseId=1&classId=2&cpi=3&workId=56167323&enc=abc'
+    );
+    assert.strictEqual(works[0].statusText, '未交');
+  });
+
+  it('parseWorkHtml 跳过隐藏的 status 模板噪声', () => {
+    const html = `
+      <ul>
+        <li data="https://mooc1.chaoxing.com/mooc-ans/mooc2/work/task?courseId=1&classId=2&cpi=3&workId=9001&enc=x">
+          <p class="overHidden2 fl">实验X</p>
+          <span class="status" style="display:none">已完成</span>
+          <span class="status">未交</span>
+        </li>
+      </ul>`;
+    const works = parseWorkHtml(html);
+    assert.strictEqual(works.length, 1);
+    assert.strictEqual(works[0].statusText, '未交');
+    const hw = normalizeWork(works[0], { courseId: 'c', clazzId: 'k', cpi: '1' });
+    assert.strictEqual(hw.submitted, false);
+    assert.strictEqual(hw.stateLabel, '待完成');
+  });
+
+  it('normalizeWork 锁定态优先：未开放不可能已完成', () => {
+    const hw = normalizeWork(
+      { workId: '55448190', title: '实验09 动态数据组织（2026级）', stateText: '未开放', statusText: '已完成' },
+      { courseId: '201764055', clazzId: '152265934', cpi: '572576752' }
+    );
+    assert.strictEqual(hw.locked, true);
+    assert.strictEqual(hw.submitted, false);
+    assert.strictEqual(hw.stateLabel, '未开放');
+  });
+
+  it('parseProblems 解析 .answerBg 选项结构（选择题）', () => {
+    const html = `
+      <div class="marBom60 questionLi" data="405964601" id="question405964601">
+        <div class="aiAreaContent">
+          <h3 class="mark_name colorDeep">1. <span class="colorShallow">(单选题)</span><span class="qtContent workTextWrap"><p>下列哪项正确？</p></span></h3>
+          <div class="qtDetail">
+            <div class="answerBg"><span class="num_option">A.</span><span class="answer_p">选项甲</span></div>
+            <div class="answerBg"><span class="num_option">B.</span><span class="answer_p">选项乙</span></div>
+          </div>
+        </div>
+      </div>`;
+    const problems = parseProblems(html);
+    assert.strictEqual(problems.length, 1);
+    assert.strictEqual(problems[0].type, QuestionType.Single);
+    assert.strictEqual(problems[0].options?.length, 2);
+    assert.deepStrictEqual(problems[0].options?.[0], { key: 'A', text: '选项甲' });
+    assert.deepStrictEqual(problems[0].options?.[1], { key: 'B', text: '选项乙' });
+    assert.ok(!problems[0].contentText.includes('选项甲'));
+  });
+
+  it('parseProblems 题型按显式标记判定：题干含"程序设计"散文不误判为程序题', () => {
+    const html = `
+      <div class="marBom60 questionLi" data="405964700" id="question405964700">
+        <div class="aiAreaContent">
+          <h3 class="mark_name colorDeep">15. <span class="colorShallow">(填空题)</span><span class="qtContent workTextWrap"><p>______将编程任务和计算机运算任务分离开来。</p></span></h3>
+          <div class="qtDetail"><ul><li>A. 汇编语言</li><li>B. 机器语言</li><li>C. 高级程序设计语言</li><li>D. 自然语言</li></ul></div>
+          <div class="mark_answer"><dl><dt>我的答案：</dt><dd class="stuAnswerContent">D
+:高级程序设计语言；</dd></dl></div>
+        </div>
+      </div>`;
+    const problems = parseProblems(html);
+    assert.strictEqual(problems.length, 1);
+    assert.strictEqual(problems[0].type, QuestionType.Blank);
+    assert.strictEqual(problems[0].templateCode, undefined);
+  });
+
+  it('parseProblems 无题型标记时按结构判定（选项->选择，下划线->填空）', () => {
+    const choice = `
+      <div class="questionLi" data="405964701">
+        <div class="qtContent"><p>______将编程任务分离开来。</p></div>
+        <ul><li>A. 汇编语言</li><li>B. 高级程序设计语言</li></ul>
+      </div>`;
+    assert.strictEqual(parseProblems(choice)[0].type, QuestionType.Single);
+
+    const blank = `
+      <div class="questionLi" data="405964702">
+        <div class="qtContent"><p>______称为高级程序设计语言。</p></div>
+      </div>`;
+    assert.strictEqual(parseProblems(blank)[0].type, QuestionType.Blank);
+  });
 });

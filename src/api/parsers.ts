@@ -4,7 +4,7 @@
  */
 import { QuestionType } from '../config/constants';
 import { Chapter, Homework, HomeworkKind, NoticeCategory, NoticeItem, Problem, TaskPoint, TestCase } from './types';
-import { parseDateTime, extractAll, parseAttrs, stripHtml, tryParseJson } from '../utils/text';
+import { parseDateTime, decodeEntities, extractAll, parseAttrs, stripHtml, tryParseJson } from '../utils/text';
 
 /* ------------------------------ 作业 ------------------------------ */
 
@@ -128,10 +128,11 @@ export function normalizeWork(
   const stateText = `${raw.stateText ?? ''} ${platformStateText(raw.statusText)}`.trim();
   const locked = /未开放|未开始|未发布/.test(stateText);
   const expired = /已截止|已过期|已结束/.test(stateText);
-  const awaitingMark = /待批阅|待批改|批阅中/.test(`${raw.stateText ?? ''} ${raw.statusText ?? ''}`);
+  // 未开放/未开始的作业不可能已完成或待批改：锁定态优先，避免列表噪声文案（如隐藏模板/相邻条目）误判
+  const awaitingMark = !locked && /待批阅|待批改|批阅中/.test(`${raw.stateText ?? ''} ${raw.statusText ?? ''}`);
   const submitted =
-    Number(raw.submitStatus ?? raw.status ?? 0) > 0 || /已完成|已提交|已作答/.test(stateText) || awaitingMark;
-  const marked = raw.isLook === 1 || raw.isLook === '1' || /已批改|已批阅/.test(stateText);
+    !locked && (Number(raw.submitStatus ?? raw.status ?? 0) > 0 || /已完成|已提交|已作答/.test(stateText) || awaitingMark);
+  const marked = !locked && (raw.isLook === 1 || raw.isLook === '1' || /已批改|已批阅/.test(stateText));
   const deadline = parseDateTime(raw.endTime ?? raw.endtime) || deadlineFromRemaining(raw.remainText);
   return {
     workId: String(raw.workId ?? raw.id ?? ''),
@@ -248,39 +249,42 @@ function parseWorkDataBlocks(html: string): RawWork[] {
 }
 
 function rawWorkFromBlock(block: string, sectionState: ReturnType<typeof stateFromText>): RawWork | undefined {
-  const text = stripHtml(block);
   const openTag = /^<[a-z]+[^>]*>/i.exec(block)?.[0] ?? '';
+  // 剔除条目内部隐藏元素（模板/无障碍占位）后再做状态与字段判定，避免隐藏文案污染
+  const html = openTag + stripHiddenElements(block.slice(openTag.length));
+  const text = stripHtml(html);
   const attrs = parseAttrs(openTag);
   const rawLink =
     looksLikeWorkUrl(attrs['data']) ? attrs['data'] :
     looksLikeWorkUrl(attrs['href']) ? attrs['href'] :
     looksLikeWorkUrl(attrs['onclick']) ? /(https?:\/\/[^\s"'<>]+|\/\/[^\s"'<>]+|\/[^\s"'<>]+)/.exec(attrs['onclick'])?.[1] :
     undefined;
-  const url = rawLink;
+  // 详情直链也可能嵌在条目内部的 <a href> 中（书面/其他类型作业常见，外层标签无 data 属性）
+  const url = normalizeLink(rawLink) ?? normalizeLink(firstWorkLinkInBlock(html));
   const id =
     paramOf(url, 'workid') ??
     paramOf(url, 'taskrefid') ??
-    /workid\s*=\s*["']?(\w+)/i.exec(block)?.[1] ??
-    /taskrefid\s*=\s*["']?(\w+)/i.exec(block)?.[1];
+    /workid\s*=\s*["']?(\w+)/i.exec(html)?.[1] ??
+    /taskrefid\s*=\s*["']?(\w+)/i.exec(html)?.[1];
   const titleMatch =
-    /<p[^>]*class=["'][^"']*(?:title|overHidden)[^"']*["'][^>]*>([\s\S]*?)<\/p>/i.exec(block) ??
-    /<p[^>]*>([\s\S]*?)<\/p>/i.exec(block) ??
-    /<a[^>]*>([\s\S]*?)<\/a>/i.exec(block);
+    /<p[^>]*class=["'][^"']*(?:title|overHidden)[^"']*["'][^>]*>([\s\S]*?)<\/p>/i.exec(html) ??
+    /<p[^>]*>([\s\S]*?)<\/p>/i.exec(html) ??
+    /<a[^>]*>([\s\S]*?)<\/a>/i.exec(html);
   const title = stripHtml(titleMatch?.[1] ?? '');
   if (!title && !id) {
     return undefined;
   }
   const dates = /([0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}[ T][0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)/g;
   const end = /截止[^0-9]*([0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}[ T][0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)/.exec(text)?.[1]
-    ?? dates.exec(block)?.[1];
+    ?? dates.exec(html)?.[1];
   const start = /开放[^0-9]*([0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}[ T][0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)/.exec(text)?.[1];
   const score = /(?:得分|score|成绩)\s*[:：]?\s*(\d+(?:\.\d+)?)/i.exec(text)?.[1]
     ?? /(\d+(?:\.\d+)?)\s*分(?![钟时])/.exec(text)?.[1];
   const remainText = /剩余[\d天小时分钟秒]+/.exec(text)?.[0];
-  const statusSpan = /<span[^>]*class=["'][^"']*status[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(block)?.[1];
-  const statusText = stripHtml(statusSpan ?? '') || /(未开放|未开始|即将开放|待批阅|待批改|已批阅|已批改|已完成|已提交|已作答|未提交|未交|已截止|已过期)/.exec(text)?.[1] || '';
-  const courseName = courseNameFromSpans(block, title);
-  const itemState = stateFromText(block) ?? (statusText ? stateFromText(platformStateText(statusText) || statusText) : undefined);
+  const statusSpan = statusTextFromBlock(html);
+  const statusText = statusSpan || /(未开放|未开始|即将开放|待批阅|待批改|已批阅|已批改|已完成|已提交|已作答|未提交|未交|已截止|已过期)/.exec(text)?.[1] || '';
+  const courseName = courseNameFromSpans(html, title);
+  const itemState = stateFromText(text) ?? (statusText ? stateFromText(platformStateText(statusText) || statusText) : undefined);
   const state = itemState ?? sectionState;
   return {
     workId: id ?? '',
@@ -300,8 +304,61 @@ function rawWorkFromBlock(block: string, sectionState: ReturnType<typeof stateFr
   };
 }
 
+/** 移除隐藏元素（display:none / hidden 属性）及其内容，避免模板/占位文案参与状态判定 */
+function stripHiddenElements(html: string): string {
+  return html.replace(/<([a-z][a-z0-9]*)[^>]*(?:display\s*:\s*none|(?<![\w-])hidden)[^>]*>[\s\S]*?<\/\1>/gi, ' ');
+}
+
 function looksLikeWorkUrl(value: string | undefined): value is string {
   return !!value && /workid|taskrefid|dowork|work\/task|doHomeWork/i.test(value);
+}
+
+/** 条目内第一个作业详情直链（外层标签无 data/href 时兜底） */
+function firstWorkLinkInBlock(block: string): string | undefined {
+  const re = /<[a-z]+[^>]*(?:href|data|onclick)=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(block)) !== null) {
+    if (looksLikeWorkUrl(m[1])) {
+      return m[1];
+    }
+  }
+  return undefined;
+}
+
+/** 解码实体/相对路径，规范为可请求的绝对 URL；非作业链接返回 undefined */
+function normalizeLink(link: string | undefined): string | undefined {
+  if (!link) {
+    return undefined;
+  }
+  const decoded = decodeEntities(link).trim();
+  const embedded = /(https?:\/\/[^\s"'<>]+|\/\/[^\s"'<>]+|\/[^\s"'<>]+)/.exec(decoded)?.[1] ?? decoded;
+  if (embedded.startsWith('//')) {
+    return `https:${embedded}`;
+  }
+  if (embedded.startsWith('/')) {
+    return `https://mooc1.chaoxing.com${embedded}`;
+  }
+  return /^https?:/i.test(embedded) ? embedded : undefined;
+}
+
+/**
+ * 条目状态文本：取第一个「可见」的 status 类 span。
+ * 隐藏元素（display:none / hidden / aria-hidden）内的文案可能是模板噪声，需跳过。
+ */
+function statusTextFromBlock(block: string): string {
+  const spanRe = /<span[^>]*class=["'][^"']*\bstatus\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = spanRe.exec(block)) !== null) {
+    const tag = m[0].slice(0, m[0].indexOf('>') + 1);
+    if (/display\s*:\s*none|hidden|aria-hidden=["']true["']/i.test(tag)) {
+      continue;
+    }
+    const text = stripHtml(m[1]).trim();
+    if (text) {
+      return text;
+    }
+  }
+  return '';
 }
 
 function paramOf(url: string | undefined, key: string): string | undefined {
@@ -543,10 +600,11 @@ export function parseProblems(html: string): Problem[] {
   const problems: Problem[] = [];
   for (const { id, block } of blocks) {
     const text = stripHtml(block);
-    const type = detectQuestionType(text);
 
     let stemHtml = extractQuestionStem(block);
-    const optionAnchor = /<li[^>]*>\s*(?:<[^>]*>\s*)*[A-Da-d][.、．]/i.exec(stemHtml);
+    const optionAnchor =
+      /<li[^>]*>\s*(?:<[^>]*>\s*)*[A-Da-d][.、．]/i.exec(stemHtml) ??
+      /<[^>]*class=["'][^"']*answerBg[^"']*["'][^>]*>/i.exec(stemHtml);
     if (optionAnchor) {
       stemHtml = stemHtml.slice(0, optionAnchor.index);
     }
@@ -554,12 +612,9 @@ export function parseProblems(html: string): Problem[] {
     stemHtml = stemHtml.replace(/^[\s\S]{0,80}?(单选题|多选题|判断题|填空题|简答题|程序设计|程序填空|编程题|程序题)/, '$1');
     const contentText = stripHtml(stemHtml);
 
-    const options: { key: string; text: string }[] = [];
-    const optRe = /<li[^>]*>\s*(?:<[^>]*>\s*)*([A-Da-d])[.、．]([\s\S]*?)<\/li>/gi;
-    let om: RegExpExecArray | null;
-    while ((om = optRe.exec(block)) !== null) {
-      options.push({ key: om[1].toUpperCase(), text: stripHtml(om[2]) });
-    }
+    // 选项先于题型判定提取：题型必须由显式标记/结构特征决定，避免题干散文（如"高级程序设计语言"）误判
+    const options = extractBlockOptions(block);
+    const type = detectQuestionTypeForBlock(block, contentText, options);
 
     const bankId = /(题库编号|题号|编号)\s*[:：]?\s*([A-Za-z0-9\-]{3,})/.exec(text)?.[2];
     const timeMs = /时间限制\s*[:：]\s*(\d+)\s*(ms|毫秒|s|秒)/i.exec(text);
@@ -602,6 +657,98 @@ export function parseProblems(html: string): Problem[] {
     });
   }
   return problems;
+}
+
+/** 题目块选项提取：<li>A. …</li> 优先，其次新版作答页 .answerBg 结构 */
+function extractBlockOptions(block: string): Array<{ key: string; text: string }> {
+  const options: Array<{ key: string; text: string }> = [];
+  const optRe = /<li[^>]*>\s*(?:<[^>]*>\s*)*([A-Da-d])[.、．]([\s\S]*?)<\/li>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = optRe.exec(block)) !== null) {
+    options.push({ key: m[1].toUpperCase(), text: stripHtml(m[2]) });
+  }
+  if (!options.length) {
+    options.push(...extractAnswerBgOptions(block));
+  }
+  return options;
+}
+
+/**
+ * 题型判定（按可信度降序）：
+ * 1. 显式标记：typeName 属性 / (程序题)(单选题) 括号标记 / type_tit|titType 分组标题
+ * 2. 结构特征：选项(≥2) -> 选择；代码特征 -> 程序题；下划线/填空 -> 填空
+ * 3. 关键词兜底：仅取题干开头，避免正文散文误判
+ */
+function detectQuestionTypeForBlock(
+  block: string,
+  stemText: string,
+  options: Array<{ key: string; text: string }>
+): QuestionType {
+  const explicit = detectExplicitQuestionType(block);
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  if (options.length >= 2) {
+    return /多选|多项|checkbox/i.test(block) ? QuestionType.Multiple : QuestionType.Single;
+  }
+  if (/(#include|using\s+namespace|int\s+main\s*\(|public\s+class\s+\w|def\s+\w+\s*\(|newProcedure|模板代码)/.test(block)) {
+    return QuestionType.Programming;
+  }
+  if (/_{3,}|填空|请填写/.test(stemText)) {
+    return QuestionType.Blank;
+  }
+  return detectQuestionType(stemText.slice(0, 120));
+}
+
+/** 显式题型标记（页面自带的权威标注） */
+function detectExplicitQuestionType(block: string): QuestionType | undefined {
+  const typeName = /\btypenam\w*\s*=\s*["']([^"']+)["']/i.exec(block)?.[1];
+  if (typeName) {
+    const t = detectQuestionType(typeName);
+    if (t !== QuestionType.Unknown) {
+      return t;
+    }
+  }
+  const marker = /[（(]\s*(程序题|程序填空|程序设计题|编程题|上机题|单选题|单项选择题|多选题|多项选择题|选择题|判断题|填空题|简答题|问答题|论述题)\s*[)）]/.exec(block)?.[1];
+  if (marker) {
+    const t = detectQuestionType(marker);
+    if (t !== QuestionType.Unknown) {
+      return t;
+    }
+  }
+  const groupTitle = /<h[1-6][^>]*class=["'][^"']*(?:type_tit|titType)[^"']*["'][^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(block)?.[1];
+  if (groupTitle) {
+    const t = detectQuestionType(stripHtml(groupTitle));
+    if (t !== QuestionType.Unknown) {
+      return t;
+    }
+  }
+  return undefined;
+}
+
+/** 新版作答页选项结构解析：.answerBg 容器内 .num_option(A.) + .answer_p(选项文本) */
+function extractAnswerBgOptions(block: string): Array<{ key: string; text: string }> {
+  const out: Array<{ key: string; text: string }> = [];
+  const anchorRe = /<[^>]*class=["'][^"']*answerBg[^"']*["'][^>]*>/gi;
+  const positions: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = anchorRe.exec(block)) !== null) {
+    if (!positions.length || m.index > positions[positions.length - 1]) {
+      positions.push(m.index);
+    }
+  }
+  for (let i = 0; i < positions.length; i++) {
+    const chunk = block.slice(positions[i], i + 1 < positions.length ? positions[i + 1] : positions[i] + 1500);
+    const keyRaw = /class=["'][^"']*(?:num_option_dx|num_option)[^"']*["'][^>]*>([\s\S]*?)</i.exec(chunk)?.[1]
+      ?? /^\s*([A-Za-z])[.、．)）]/.exec(stripHtml(chunk))?.[1];
+    const textRaw = /class=["'][^"']*answer_p[^"']*["'][^>]*>([\s\S]*?)<\/[a-z]+>/i.exec(chunk)?.[1];
+    const key = (stripHtml(keyRaw ?? '').replace(/[.、．)）\s]/g, '') || String.fromCharCode(65 + i)).toUpperCase().slice(0, 2);
+    const text = stripHtml(textRaw ?? chunk).trim();
+    if (text) {
+      out.push({ key, text });
+    }
+  }
+  return out;
 }
 
 /** 题干提取：新版批改页取 .qtContent 富文本，其余剔除作答/评分区后取整块 */

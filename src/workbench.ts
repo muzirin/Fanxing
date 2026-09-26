@@ -7,7 +7,7 @@ import * as path from 'path';
 import { FanxingContext, ProblemWorkspace } from './context';
 import { LANGUAGES, LanguageSpec, QUESTION_TYPE_LABEL, Verdict, VERDICT_LABEL, SIGN_TYPE_LABEL, ENDPOINTS } from './config/constants';
 import { Homework, Problem, TestCase } from './api/types';
-import { extractRawNotices, extractRawWorks, homeworkFromTaskPoint, mergeHomeworkLists, parseCoursePage } from './api/parsers';
+import { extractRawNotices, extractRawWorks, homeworkFromTaskPoint, mergeHomeworkLists, parseCoursePage, parseProblems } from './api/parsers';
 import { HomeworkNode, HomeworkCourseNode } from './providers/homeworkTree';
 import { NoticeNode } from './providers/notificationTree';
 import { ProblemPanel } from './providers/problemPanel';
@@ -413,6 +413,31 @@ export class Workbench {
         await fs.writeFile(file, raw, 'utf8');
         written.push(file);
         summary.push(`  work/list 主响应 ${raw.length} 字符 -> 解析 ${extractRawWorks(raw).length} 条`);
+
+        // 逐条解析结果（核对状态判定是否与网页一致）
+        const items = this.ctx.state.homeworkByCourse.get(course.courseId) ?? [];
+        for (const item of items) {
+          summary.push(
+            `  - ${item.workId} kind=${item.kind} state=${item.stateLabel} status=${item.statusText ?? '-'}` +
+              ` submitted=${item.submitted} locked=${item.locked} url=${item.url ? 'yes' : 'no'} :: ${item.title}`
+          );
+        }
+
+        // 非编程题：额外导出详情页原始响应，用于适配题型/选项结构
+        for (const item of items.filter((h) => h.kind !== 'code').slice(0, 3)) {
+          const detailUrl =
+            item.url ??
+            `${ENDPOINTS.workDetailMobile}?workId=${item.workId}&courseId=${item.courseId}&classId=${item.clazzId}&cpi=${item.cpi}&ut=s`;
+          try {
+            const detail = await this.ctx.http.getHtml(detailUrl);
+            const detailFile = path.join(outDir, `detail-${item.workId}.html`);
+            await fs.writeFile(detailFile, detail, 'utf8');
+            written.push(detailFile);
+            summary.push(`    detail(${item.kind}) ${detailUrl.slice(0, 130)} -> ${detail.length} 字符，解析 ${parseProblems(detail).length} 题`);
+          } catch (err) {
+            summary.push(`    detail(${item.kind}) 失败: ${String(err)}`);
+          }
+        }
       } catch (err) {
         this.ctx.logger.warn(`dump 失败: ${course.name}`, String(err));
         summary.push(`[${course.name}] dump 失败: ${String(err)}`);
@@ -621,12 +646,15 @@ export class Workbench {
       this.ctx.state.problemsByWork.set(homework.workId, problems);
     }
     if (!problems.length) {
+      const offline = homework.kind === 'written' || homework.kind === 'file';
+      const hint = offline
+        ? '该作业为书面/附件类（无在线题目），请在学习通网页端查看或上传附件。'
+        : '未能解析到题目内容（可能未开放或题型结构尚未适配）。可运行「Fanxing: 抓取作业原始响应」把 raw 样本发回适配。';
       void this.showHtmlPanel(
         `作业: ${homework.title}`,
         `<div class="fx-section">
            <p><span class="fx-tag warn">${escapeHtml(homework.stateLabel ?? '未知状态')}</span> ${escapeHtml(homework.title)}</p>
-           <p class="fx-muted">未能解析到题目内容（可能未开放或接口结构变化）。
-           可运行「Fanxing: 抓取作业原始响应」把 raw 样本发回适配，或在学习通网页端查看。</p>
+           <p class="fx-muted">${hint}</p>
          </div>`
       );
       return;
