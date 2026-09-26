@@ -8,3 +8,8 @@ tsconfig.json
 **/*.map
 .gitignore
 openclaw*
+.codely-cli/**
+.kilo/**
+fanxing-debug/**
+.github/**
+*.vsix

@@ -2,7 +2,7 @@
   "name": "fanxing",
   "displayName": "Fanxing 泛星（繁星）",
   "description": "超星学习通 VS Code 集成开发环境：课程 / 通知 / 作业 / 编程题本地开发与提交 / 环境检测 / AI 引导式辅导",
-  "version": "1.0.0-b1",
+  "version": "1.0.0-b2",
   "publisher": "fanxing-dev",
   "license": "GPL-3.0-only",
   "repository": {

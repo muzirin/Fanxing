@@ -5,7 +5,7 @@
 
 界面完全使用 VS Code 原生视觉（`--vscode-*` 主题变量 + codicon 图标），不使用 emoji 作为图标。
 
-当前版本：**1.0.0-b1**（首个 Beta，见 [CHANGELOG.md](CHANGELOG.md)）。
+当前版本：**1.0.0-b2**（Beta，见 [CHANGELOG.md](CHANGELOG.md)）。
 
 ---
 
@@ -57,12 +57,12 @@
 - 命令面板（`Ctrl+Shift+P`）→ `扩展: 从 VSIX 安装...` → 选中该文件；或
 - 终端执行：
   ```powershell
-  code --install-extension .\fanxing-1.0.0-b1.vsix
+  code --install-extension .\fanxing-1.0.0-b2.vsix
   ```
 
 > **注意：不要双击 `.vsix` 文件！**
 > Windows 通常把 `.vsix` 关联给 **Visual Studio** 的 `VSIXInstaller.exe`，它装的是 Visual Studio 扩展而非 VS Code 扩展，
-> 且其清单版本解析只认纯数字（`1.0.0-b1` 这类预发布会报「Identity 的 Version 值无效」）。
+> 且其清单版本解析只认纯数字（`1.0.0-b2` 这类预发布会报「Identity 的 Version 值无效」）。
 > 本扩展是 VS Code 扩展，请始终用上面两种方式之一安装。
 
 ### 从源码构建
@@ -80,7 +80,7 @@ npm run build        # esbuild 打包 -> dist/extension.js
 
 ```bash
 npm i -D @vscode/vsce
-npx vsce package      # 生成 fanxing-1.0.0-b1.vsix
+npx vsce package      # 生成 fanxing-1.0.0-b2.vsix
 ```
 
 安装同样使用 `code --install-extension` 或命令面板 `扩展: 从 VSIX 安装...`（勿双击）。
